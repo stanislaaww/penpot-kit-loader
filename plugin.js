@@ -8,6 +8,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const log = (...a) => console.log('[KIT] ' + a.join(' '));
 const fileId = () => { try { return penpot.currentFile.id; } catch (e) { return undefined; } };
 const lib = () => penpot.library.local;
+const pagesList = () => { try { return penpot.currentFile.pages; } catch (e) { return []; } };
 
 function splitKey(key) { const i = key.lastIndexOf('/'); return i < 0 ? ['', key] : [key.slice(0, i), key.slice(i + 1)]; }
 function findColor(key) { const [p, n] = splitKey(key); return lib().colors.find((c) => c.name === n && (c.path || '') === p); }
@@ -101,8 +102,8 @@ async function run(o) {
   const L = lib();
   switch (o.op) {
     case 'page': {
-      let p = penpot.root.pages.find((x) => x.name === o.name);
-      if (!p && o.rename) { p = penpot.root.pages.find((x) => x.name === o.rename); if (p) p.name = o.name; }
+      let p = pagesList().find((x) => x.name === o.name);
+      if (!p && o.rename) { p = pagesList().find((x) => x.name === o.rename); if (p) p.name = o.name; }
       if (!p) { p = penpot.createPage(); p.name = o.name; }
       penpot.openPage(p); await sleep(900);
       if (penpot.currentPage.id !== p.id) throw new Error('страница не открылась: ' + o.name);
@@ -151,10 +152,16 @@ async function run(o) {
       const vc = penpot.createVariantFromComponents(mains);
       if (!vc) throw new Error('createVariantFromComponents вернул null');
       REF[o.ref] = vc;
+      const vs = COMP[o.refs[0]].variants;
+      if (!vs) throw new Error('у компонента нет .variants');
+      const want = (o.props || []).length;
+      let guard = 0;
+      while (vs.properties.length < want && guard++ < 6) { vs.addProperty(); }
+      log('variant props: ' + JSON.stringify(vs.properties));
+      (o.props || []).forEach((p, k) => { try { vs.renameProperty(k, p); } catch (e) { log('rename ' + k + ': ' + e.message); } });
       o.refs.forEach((r, i) => {
-        const c = COMP[r]; (o.values[i] || []).forEach((val, k) => { tryset(() => c.setVariantProperty(k, val)); });
+        (o.values[i] || []).forEach((val, k) => { try { COMP[r].setVariantProperty(k, val); } catch (e) { log('setVariantProperty ' + r + ' ' + k + ': ' + e.message); } });
       });
-      if (o.props) tryset(() => { const vs = COMP[o.refs[0]].variants; o.props.forEach((p, k) => vs.renameProperty(k, p)); });
       break;
     }
     case 'instance': {
@@ -174,11 +181,17 @@ async function run(o) {
     case 'measure': { const out = {}; for (const r of o.refs) { const s = REF[r]; if (s) out[r] = [Math.round(s.x), Math.round(s.y), Math.round(s.width), Math.round(s.height)]; } log('MEASURE ' + JSON.stringify(out)); break; }
     case 'remove': { for (const r of o.refs) { const s = REF[r]; if (s) s.remove(); } break; }
     case 'removeShapes': { const ss = penpot.currentPage.findShapes({ name: o.name }); ss.forEach((s) => s.remove()); log('removed ' + ss.length); break; }
+    case 'libremove': {
+      const list = o.kind === 'color' ? L.colors : L.typographies;
+      const [p, n] = splitKey(o.key);
+      list.filter((x) => x.name === n && (x.path || '') === p).forEach((x) => x.remove());
+      break;
+    }
     case 'dump': {
-      log('DUMP ' + JSON.stringify({ pages: penpot.root.pages.map((p) => p.name),
+      log('DUMP ' + JSON.stringify({ pages: pagesList().map((p) => p.name),
         colors: L.colors.length, typos: L.typographies.map((t) => (t.path ? t.path + '/' : '') + t.name),
-        comps: L.components.map((c) => (c.path ? c.path + '/' : '') + c.name).length,
-        sets: L.tokens.sets.map((s) => s.name), shapesOnPage: penpot.currentPage.findShapes().length }));
+        comps: L.components.length,
+        sets: (L.tokens && L.tokens.sets ? L.tokens.sets.map((s) => s.name) : 'n/a'), shapesOnPage: penpot.currentPage.findShapes().length }));
       break;
     }
     default: throw new Error('неизвестная операция ' + o.op);
