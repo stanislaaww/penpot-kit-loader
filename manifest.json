@@ -1,6 +1,6 @@
 {
-  "name": "Kit Loader (Lab 10)",
-  "description": "Принимает команды сборки UI-кита из открытой вкладки Penpot (учебная лабораторная работа 10)",
+  "name": "Kit Builder (Lab 10)",
+  "description": "Статический интерпретатор данных сборки UI-кита (лабораторная 10). Не выполняет произвольный код.",
   "version": 2,
   "code": "plugin.js",
   "permissions": ["content:read", "content:write", "library:read", "library:write"]
