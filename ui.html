@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><title>Kit Loader</title></head>
+<body style="font:12px/1.4 sans-serif;background:#15161c;color:#f4f5f7;margin:10px">
+<div id="s">Загрузчик готов. Жду команду…</div>
+<script>
+  var s = document.getElementById('s');
+  window.addEventListener('message', function (e) {
+    if (e.source !== window.parent) return;   // принимаем только от вкладки Penpot
+    var d = e.data; if (!d) return;
+    if (d.type === 'kit-run') { s.textContent = 'Выполняю…'; window.parent.postMessage(d, '*'); }
+    else if (d.type === 'done') { s.textContent = 'Готово.'; }
+    else if (d.type === 'err') { s.textContent = 'Ошибка: ' + d.msg; }
+  });
+</script>
+</body></html>
