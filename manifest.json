@@ -1,12 +1,7 @@
 {
   "name": "Kit Builder (Lab 10)",
   "description": "Статический интерпретатор данных сборки UI-кита (лабораторная 10). Не выполняет произвольный код.",
-  "version": 3,
+  "version": 2,
   "code": "plugin.js",
-  "permissions": [
-    "content:read",
-    "content:write",
-    "library:read",
-    "library:write"
-  ]
+  "permissions": ["content:read", "content:write", "library:read", "library:write"]
 }
